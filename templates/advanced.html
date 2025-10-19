@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Дополнительный функционал - Kaspi</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: auto; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-button { 
+            background: #007bff; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-right: 10px; 
+            text-decoration: none; 
+            display: inline-block;
+        }
+        .nav-button:hover { background: #0056b3; }
+        .section { 
+            margin-bottom: 30px; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            background: #f9f9f9; 
+        }
+        .section h3 { margin-top: 0; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group textarea { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 3px; 
+            box-sizing: border-box; 
+        }
+        .form-group textarea { height: 100px; resize: vertical; }
+        .btn { 
+            background: #28a745; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+        .btn:hover { background: #218838; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Дополнительный функционал Kaspi</h2>
+    
+    <div class="nav-buttons">
+        <a href="/" class="nav-button">Главная</a>
+        <a href="/advanced" class="nav-button">Дополнительный функционал</a>
+        <a href="/reports" class="nav-button">Отчеты по продажам</a>
+    </div>
+    
+    <div class="section">
+        <h3>Проверка одного заказа</h3>
+        <form method="post" action="/check_single">
+            <div class="form-group">
+                <label for="single_order">Номер заказа:</label>
+                <input type="text" id="single_order" name="order_id" placeholder="Введите номер заказа" required>
+            </div>
+            <button type="submit" class="btn">Проверить заказ</button>
+        </form>
+        {% if single_result %}
+            <div class="result {% if single_result.status == 'success' %}success{% elif single_result.status == 'error' %}error{% else %}info{% endif %}">
+                <strong>Результат:</strong> {{ single_result.message }}
+                {% if single_result.data %}
+                    <div style="margin-top: 10px;">
+                        <strong>Данные заказа:</strong>
+                        <ul>
+                        {% for row in single_result.data %}
+                            <li>{{ row|join(' | ') }}</li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="section">
+        <h3>Массовая проверка заказов</h3>
+        <form method="post" action="/check_multiple" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="multiple_orders">Номера заказов (по одному в строке):</label>
+                <textarea id="multiple_orders" name="orders_text" placeholder="Введите номера заказов, по одному в строке"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Или загрузите файл:</label>
+                <input type="file" name="orders_file" accept=".txt">
+            </div>
+            <button type="submit" class="btn">Проверить заказы</button>
+        </form>
+        {% if multiple_result %}
+            <div class="result info">
+                <strong>Результаты массовой проверки:</strong>
+                <p>Всего заказов: {{ multiple_result.total }}</p>
+                <p>Успешно: {{ multiple_result.successful }}</p>
+                <p>Отфильтровано: {{ multiple_result.filtered }}</p>
+                <p>Ошибки: {{ multiple_result.errors }}</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="section">
+        <h3>Тест прямого доступа к URL</h3>
+        <p>Новая функция: тестирует прямой доступ к странице заказа по URL</p>
+        <form method="post" action="/test_direct_url">
+            <div class="form-group">
+                <label for="direct_order">Номер заказа для тестирования:</label>
+                <input type="text" id="direct_order" name="order_id" placeholder="Введите номер заказа" required>
+            </div>
+            <button type="submit" class="btn">Тестировать прямой URL</button>
+        </form>
+        {% if direct_url_result %}
+            <div class="result {% if direct_url_result.status == 'success' %}success{% else %}error{% endif %}">
+                <strong>Результат тестирования:</strong><br>
+                <strong>URL:</strong> {{ direct_url_result.url }}<br>
+                <strong>HTTP статус:</strong> {{ direct_url_result.http_status }}<br>
+                <strong>Размер контента:</strong> {{ direct_url_result.content_length }} байт<br>
+                <strong>Найдена таблица:</strong> {{ "Да" if direct_url_result.has_table else "Нет" }}<br>
+                {% if direct_url_result.has_table %}
+                    <strong>Количество строк:</strong> {{ direct_url_result.table_rows }}<br>
+                    <strong>Есть статус "Возвращен продавцу":</strong> {{ "Да" if direct_url_result.has_return_status else "Нет" }}<br>
+                {% endif %}
+                <strong>Сообщение:</strong> {{ direct_url_result.message }}
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="section">
+        <h3>Статистика сессии</h3>
+        <form method="post" action="/session_info">
+            <button type="submit" class="btn btn-secondary">Получить информацию о сессии</button>
+        </form>
+        {% if session_info %}
+            <div class="result info">
+                <strong>Информация о сессии:</strong>
+                <p>p_instance: {{ session_info.p_instance }}</p>
+                <p>salt: {{ session_info.salt }}</p>
+                <p>Время создания: {{ session_info.created_at }}</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="section">
+        <h3>Экспорт результатов</h3>
+        <p>Здесь можно будет добавить функционал для экспорта результатов в различные форматы (CSV, Excel, JSON).</p>
+        <button class="btn btn-secondary" disabled>Экспорт в CSV</button>
+        <button class="btn btn-secondary" disabled>Экспорт в Excel</button>
+        <button class="btn btn-secondary" disabled>Экспорт в JSON</button>
+    </div>
+    
+    <div class="section">
+        <h3>Настройки</h3>
+        <form method="post" action="/settings">
+            <div class="form-group">
+                <label for="delay">Задержка между запросами (секунды):</label>
+                <input type="number" id="delay" name="delay" value="1" min="0" max="10" step="0.5">
+            </div>
+            <div class="form-group">
+                <label for="max_retries">Максимальное количество повторов:</label>
+                <input type="number" id="max_retries" name="max_retries" value="3" min="1" max="10">
+            </div>
+            <button type="submit" class="btn">Сохранить настройки</button>
+        </form>
+    </div>
+</div>
+</body>
+</html> 

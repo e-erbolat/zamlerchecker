@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Проверка заказов Kaspi</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: auto; }
+        .result { margin-top: 30px; }
+        .error { color: red; }
+        .success { color: green; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
+        .order-section { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+        .order-header { font-weight: bold; margin-bottom: 10px; color: #333; }
+        .data-table { margin-top: 10px; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-button { 
+            background: #007bff; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-right: 10px; 
+            text-decoration: none; 
+            display: inline-block;
+        }
+        .nav-button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Проверка заказов Kaspi</h2>
+    
+    <div class="nav-buttons">
+        <a href="/" class="nav-button">Главная</a>
+        <a href="/advanced" class="nav-button">Дополнительный функционал</a>
+        <a href="/reports" class="nav-button">Отчеты по продажам</a>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data">
+        <label>Загрузите файл <b>orders.txt</b> (по одному номеру заказа в строке):</label><br><br>
+        <input type="file" name="orders_file" accept=".txt" required>
+        <button type="submit">Проверить</button>
+    </form>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    {% if result is not none %}
+        <div class="result">
+            <h3>Результаты проверки заказов:</h3>
+            
+            {% set total_orders = result|length %}
+            {% set successful_orders = 0 %}
+            {% set filtered_orders = 0 %}
+            {% set error_orders = 0 %}
+            
+            {% for order_id, order_result in result.items() %}
+                {% if order_result.status == "success" %}
+                    {% set successful_orders = successful_orders + 1 %}
+                {% elif order_result.status == "filtered" %}
+                    {% set filtered_orders = filtered_orders + 1 %}
+                {% else %}
+                    {% set error_orders = error_orders + 1 %}
+                {% endif %}
+            {% endfor %}
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <h4>Статистика:</h4>
+                <p><strong>Всего заказов:</strong> {{ total_orders }}</p>
+                <p><strong style="color: green;">Показано (без статуса "Возвращен продавцу"):</strong> {{ successful_orders }}</p>
+                <p><strong style="color: orange;">Отфильтровано (статус "Возвращен продавцу"):</strong> {{ filtered_orders }}</p>
+                <p><strong style="color: red;">Ошибки:</strong> {{ error_orders }}</p>
+            </div>
+            
+            {% for order_id, order_result in result.items() %}
+            <div class="order-section">
+                <div class="order-header">Заказ: {{ order_id }}</div>
+                {% if order_result.status == "success" %}
+                    {% if order_result.data %}
+                        <div class="success">Данные найдены:</div>
+                        <div class="data-table">
+                            <table>
+                                <tr>
+                                    <th>Дата статуса</th>
+                                    <th>Трек Kaspi</th>
+                                    <th>КС</th>
+                                    <th>Город</th>
+                                </tr>
+                                {% for row in order_result.data %}
+                                <tr>
+                                    {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="error">Данные не найдены</div>
+                    {% endif %}
+                {% elif order_result.status == "filtered" %}
+                    <div style="color: orange;">{{ order_result.message }}</div>
+                {% else %}
+                    <div class="error">Ошибка: {{ order_result.message }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+</body>
+</html> 

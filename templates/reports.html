@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Отчеты по продажам - Kaspi</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 1200px; margin: auto; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-button { 
+            background: #007bff; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-right: 10px; 
+            text-decoration: none; 
+            display: inline-block;
+        }
+        .nav-button:hover { background: #0056b3; }
+        .upload-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 3px; 
+            box-sizing: border-box; 
+        }
+        .btn { 
+            background: #28a745; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin-right: 10px;
+        }
+        .btn:hover { background: #218838; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .file-info {
+            background: #e2e3e5;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+        .products-table th, .products-table td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .products-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        .products-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .products-table tr:hover {
+            background-color: #e9ecef;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        .filters-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .filter-row input, .filter-row select {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .export-buttons {
+            margin-top: 15px;
+        }
+        .export-buttons .btn {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Отчеты по продажам</h2>
+    
+    <div class="nav-buttons">
+        <a href="/" class="nav-button">Главная</a>
+        <a href="/advanced" class="nav-button">Дополнительный функционал</a>
+        <a href="/reports" class="nav-button">Отчеты по продажам</a>
+    </div>
+    
+    <div class="upload-section">
+        <h3>Загрузка данных о продуктах</h3>
+        <p><strong>Формат файла:</strong> Excel файл (.xlsx, .xls) с данными о продуктах. Первая строка должна содержать названия столбцов.</p>
+        <form method="post" enctype="multipart/form-data" action="/upload_products">
+            <div class="form-group">
+                <label for="excel_file">Выберите Excel файл с данными о продуктах:</label>
+                <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+            </div>
+            <div class="form-group">
+                <label for="sheet_name">Название листа (оставьте пустым для первого листа):</label>
+                <input type="text" id="sheet_name" name="sheet_name" placeholder="Sheet1">
+            </div>
+            <button type="submit" class="btn">Загрузить данные</button>
+        </form>
+    </div>
+
+    {% if file_info %}
+    <div class="file-info">
+        <h4>Информация о загруженном файле:</h4>
+        <p><strong>Имя файла:</strong> {{ file_info.filename }}</p>
+        <p><strong>Размер:</strong> {{ file_info.size }} байт</p>
+        <p><strong>Лист:</strong> {{ file_info.sheet_name }}</p>
+        <p><strong>Количество продуктов:</strong> {{ file_info.rows }}</p>
+        <p><strong>Количество полей:</strong> {{ file_info.columns }}</p>
+    </div>
+    {% endif %}
+
+    {% if stats %}
+    <div class="stats-section">
+        <h3>Статистика загруженных данных</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.total_products }}</div>
+                <div class="stat-label">Всего продуктов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.unique_manufacturers }}</div>
+                <div class="stat-label">Уникальных производителей</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.unique_types }}</div>
+                <div class="stat-label">Уникальных типов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.unique_packages }}</div>
+                <div class="stat-label">Уникальных упаковок</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if group_stats %}
+    <div class="stats-section">
+        <h3>Статистика группировки</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ group_stats.total_original }}</div>
+                <div class="stat-label">Исходных записей</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ group_stats.total_grouped }}</div>
+                <div class="stat-label">Сгруппированных товаров</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ group_stats.total_quantity }}</div>
+                <div class="stat-label">Общее количество</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ group_stats.filtered_by_status }}</div>
+                <div class="stat-label">Отфильтровано по статусу</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if filters %}
+    <div class="filters-section">
+        <h4>Фильтры для отображения данных:</h4>
+        <form method="post" action="/filter_products">
+            <div class="filter-row">
+                <label>Производитель:</label>
+                <select name="manufacturer_filter">
+                    <option value="">Все производители</option>
+                    {% for manufacturer in filters.manufacturers %}
+                    <option value="{{ manufacturer }}">{{ manufacturer }}</option>
+                    {% endfor %}
+                </select>
+                
+                <label>Тип:</label>
+                <select name="type_filter">
+                    <option value="">Все типы</option>
+                    {% for type in filters.types %}
+                    <option value="{{ type }}">{{ type }}</option>
+                    {% endfor %}
+                </select>
+                
+                <label>Корпус:</label>
+                <select name="package_filter">
+                    <option value="">Все корпуса</option>
+                    {% for package in filters.packages %}
+                    <option value="{{ package }}">{{ package }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button type="submit" class="btn btn-secondary">Применить фильтры</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if products_data %}
+    <div class="upload-section">
+        <h3>Данные о продуктах</h3>
+        <div class="table-container">
+            <table class="products-table">
+                <thead>
+                    <tr>
+                        {% for header in products_data.headers %}
+                        <th>{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products_data.products %}
+                    <tr>
+                        {% for value in product %}
+                        <td title="{{ value }}">{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="export-buttons">
+            <button class="btn btn-secondary" onclick="exportToCSV()">Экспорт в CSV</button>
+            <button class="btn btn-secondary" onclick="exportToExcel()">Экспорт в Excel</button>
+            <button class="btn btn-secondary" onclick="generateReport()">Сгенерировать отчет</button>
+            <form method="post" action="/group_products" style="display: inline;">
+                <button type="submit" class="btn btn-primary">Группировать по товарам</button>
+            </form>
+            {% if group_stats %}
+            <form method="post" action="/export_grouped_excel" style="display: inline;">
+                <button type="submit" class="btn btn-success">Экспорт в Excel</button>
+            </form>
+            {% endif %}
+            {% if products_data %}
+            <form method="post" action="/export_warehouse_report" style="display: inline;">
+                <button type="submit" class="btn btn-info">Отчет по складам</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/clear_products" style="display: inline;">
+                <button type="submit" class="btn btn-secondary" onclick="return confirm('Очистить все данные о продуктах?')">Очистить данные</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="result error">
+        <strong>Ошибка:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="result success">
+        <strong>Успешно!</strong> {{ success }}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function exportToCSV() {
+    // Функция для экспорта в CSV
+    alert('Функция экспорта в CSV будет реализована');
+}
+
+function exportToExcel() {
+    // Функция для экспорта в Excel
+    alert('Функция экспорта в Excel будет реализована');
+}
+
+function generateReport() {
+    // Функция для генерации отчета
+    alert('Функция генерации отчета будет реализована');
+}
+</script>
+</body>
+</html> 
